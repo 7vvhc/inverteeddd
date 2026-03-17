@@ -13,20 +13,17 @@ exports.handler = async (event) => {
         const { question, options } = JSON.parse(event.body);
         const API_KEY = 'AIzaSyBGQF2bK6NWYX7wqkwxBaGFzEfu0RAx5j0';
 
-        // Я сменил модель на gemini-1.5-pro, она мощнее и точно есть в базе
         const postData = JSON.stringify({
             contents: [{
                 parts: [{
-                    text: `Ты — эксперт по тестам. Реши вопрос и напиши ТОЛЬКО индексы правильных ответов через запятую.
-                    Вопрос: "${question}"
-                    Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}`
+                    text: `Реши тест. Даны варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}. Вопрос: "${question}". Напиши только номера правильных ответов через запятую.`
                 }]
             }]
         });
 
         const aiResponse = await new Promise((resolve, reject) => {
-            // Используем актуальную версию v1
-            const req = https.request(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${API_KEY}`, {
+            // Используем v1beta и gemini-1.5-flash — это 100% бесплатная рабочая связка
+            const req = https.request(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             }, (res) => {
@@ -47,7 +44,7 @@ exports.handler = async (event) => {
             return { statusCode: 200, headers, body: JSON.stringify({ correct_indices }) };
         }
 
-        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0], error: "No text from AI" }) };
+        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0], error: "No text" }) };
 
     } catch (e) {
         return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0], error: e.message }) };
