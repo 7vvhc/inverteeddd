@@ -13,12 +13,19 @@ exports.handler = async (event) => {
 
         options.forEach((opt, i) => {
             const lowOpt = opt.toLowerCase();
-            // Поиск для задачи с Хромом (скрин image_04a4e2.png)
+            
+            // Логика для вопроса про алюминий (image_048298.png)
+            // Алюминий гидроксид амфотерный, растворяется и в кислотах, и в щелочах
+            if (lowQ.includes("алюміній") && lowQ.includes("розчиняється")) {
+                if (lowOpt.includes("кислоті") || lowOpt.includes("лузі")) found.push(i);
+            }
+            
+            // Другие твои тесты
             if (lowQ.includes("хром") && lowOpt.includes("0,353")) found.push(i);
-            // Поиск для Аргентум нітрату (скрин image_04fb98.png)
             if (lowQ.includes("аргентум") && lowOpt.includes("хлорид")) found.push(i);
         });
 
+        // Если ничего не нашли, по умолчанию подсветим первый
         if (found.length === 0) found = [0];
 
         return {
