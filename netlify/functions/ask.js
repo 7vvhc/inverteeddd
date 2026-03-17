@@ -14,36 +14,33 @@ exports.handler = async (event) => {
         const API_KEY = 'AIzaSyBGQF2bK6NWYX7wqkwxBaGFzEfu0RAx5j0';
 
         const postData = JSON.stringify({
-            contents: [{
-                parts: [{
-                    text: `Реши тест. Вопрос: "${question}". Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}. Напиши ТОЛЬКО цифры правильных ответов через запятую.`
-                }]
-            }]
+            contents: [{ parts: [{ text: `Реши тест. Вопрос: "${question}". Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}. Напиши ТОЛЬКО цифры правильных ответов через запятую.` }] }]
         });
 
-        const aiResponse = await new Promise((resolve, reject) => {
+        const result = await new Promise((resolve) => {
             const req = https.request(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             }, (res) => {
-                let data = '';
-                res.on('data', (chunk) => data += chunk);
-                res.on('end', () => resolve(JSON.parse(data)));
+                let str = '';
+                res.on('data', (chunk) => str += chunk);
+                res.on('end', () => resolve(JSON.parse(str)));
             });
-            req.on('error', (e) => reject(e));
             req.write(postData);
             req.end();
         });
 
-        if (aiResponse.candidates && aiResponse.candidates[0].content.parts[0].text) {
-            const aiText = aiResponse.candidates[0].content.parts[0].text;
-            const correct_indices = aiText.match(/\d+/g).map(Number);
-            return { statusCode: 200, headers, body: JSON.stringify({ correct_indices }) };
+        // ЛОГИРУЕМ ОТВЕТ В NETLIFY (проверь это в Logs -> Functions!)
+        console.log("FULL AI RESPONSE:", JSON.stringify(result));
+
+        if (result.candidates && result.candidates[0].content.parts[0].text) {
+            const text = result.candidates[0].content.parts[0].text;
+            const indices = text.match(/\d+/g).map(Number);
+            return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: indices }) };
         }
 
-        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0] }) };
-
+        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [] }) };
     } catch (e) {
-        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0], error: e.message }) };
+        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [], error: e.message }) };
     }
 };
