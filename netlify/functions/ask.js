@@ -22,8 +22,8 @@ exports.handler = async (event) => {
         });
 
         const result = await new Promise((resolve, reject) => {
-            // Используем v1 и полное название модели gemini-1.5-flash
-            const req = https.request(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+            // Используем классическую модель gemini-pro и версию v1
+            const req = https.request(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             }, (res) => {
@@ -36,7 +36,7 @@ exports.handler = async (event) => {
             req.end();
         });
 
-        console.log("Gemini Output:", JSON.stringify(result));
+        console.log("FINAL ATTEMPT LOG:", JSON.stringify(result));
 
         if (result.candidates && result.candidates[0].content.parts[0].text) {
             const text = result.candidates[0].content.parts[0].text;
@@ -44,7 +44,7 @@ exports.handler = async (event) => {
             return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: indices }) };
         }
 
-        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [], debug: result }) };
+        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [], error: "No text", debug: result }) };
     } catch (e) {
         return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [], error: e.message }) };
     }
