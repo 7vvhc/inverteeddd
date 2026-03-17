@@ -14,10 +14,9 @@ exports.handler = async (event) => {
         const prompt = {
             contents: [{
                 parts: [{
-                    text: `Ты — эксперт по школьным тестам. Выбери правильные варианты ответа.
-                    Вопрос: "${question}"
-                    Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}
-                    Ответь ТОЛЬКО цифрами через запятую. Если правильных несколько — перечисли все.`
+                    text: `Реши тест. Даны варианты ответа: ${options.map((opt, i) => i + ": " + opt).join(", ")}. 
+                    Вопрос: "${question}". 
+                    Напиши только номера правильных ответов через запятую. Если правильный один, напиши только одну цифру.`
                 }]
             }]
         };
@@ -30,29 +29,25 @@ exports.handler = async (event) => {
 
         const data = await response.json();
         
+        // Логируем для отладки (увидишь в Netlify Logs)
+        console.log("Gemini Raw Data:", JSON.stringify(data));
+
         if (data.candidates && data.candidates[0].content.parts[0].text) {
             const aiText = data.candidates[0].content.parts[0].text;
-            // Вытягиваем все числа из ответа
-            const correct_indices = aiText.match(/\d+/g).map(Number);
-            
-            console.log("Вопрос:", question);
-            console.log("Ответ ИИ:", aiText);
+            // Убираем всё, кроме цифр и запятых, потом превращаем в массив
+            const cleanText = aiText.replace(/[^0-9,]/g, '');
+            const correct_indices = cleanText.split(',').map(Number).filter(n => !isNaN(n));
 
             return {
                 statusCode: 200,
                 headers,
-                body: JSON.stringify({ correct_indices: correct_indices })
+                body: JSON.stringify({ correct_indices: correct_indices.length > 0 ? correct_indices : [0] })
             };
         }
         
-        throw new Error("Gemini empty response");
+        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0], debug: "No text in response" }) };
 
     } catch (e) {
-        console.error("Ошибка функции:", e.message);
-        return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify({ correct_indices: [0], error: e.message })
-        };
+        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0], error: e.message }) };
     }
 };
