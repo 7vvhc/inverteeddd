@@ -14,15 +14,14 @@ exports.handler = async (event) => {
         const prompt = {
             contents: [{
                 parts: [{
-                    text: `Ты — эксперт по школьным тестам. Реши вопрос и выбери ПРАВИЛЬНЫЕ варианты ответа.
+                    text: `Ты — эксперт по школьным тестам. Выбери правильные варианты ответа.
                     Вопрос: "${question}"
                     Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}
-                    Ответь ТОЛЬКО номерами правильных вариантов через запятую (например: 0 или 0,2).`
+                    Ответь ТОЛЬКО цифрами через запятую. Если правильных несколько — перечисли все.`
                 }]
             }]
         };
 
-        // Используем встроенный fetch, он не требует установки модулей
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -33,7 +32,11 @@ exports.handler = async (event) => {
         
         if (data.candidates && data.candidates[0].content.parts[0].text) {
             const aiText = data.candidates[0].content.parts[0].text;
+            // Вытягиваем все числа из ответа
             const correct_indices = aiText.match(/\d+/g).map(Number);
+            
+            console.log("Вопрос:", question);
+            console.log("Ответ ИИ:", aiText);
 
             return {
                 statusCode: 200,
@@ -42,9 +45,10 @@ exports.handler = async (event) => {
             };
         }
         
-        throw new Error("No data from Gemini");
+        throw new Error("Gemini empty response");
 
     } catch (e) {
+        console.error("Ошибка функции:", e.message);
         return {
             statusCode: 200,
             headers,
