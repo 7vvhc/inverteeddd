@@ -1,5 +1,3 @@
-const fetch = require('node-fetch');
-
 exports.handler = async (event) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
@@ -11,22 +9,20 @@ exports.handler = async (event) => {
 
     try {
         const { question, options } = JSON.parse(event.body);
-        
-        // Твой рабочий ключ Gemini
         const API_KEY = 'AIzaSyBGQF2bK6NWYX7wqkwxBaGFzEfu0RAx5j0';
 
         const prompt = {
             contents: [{
                 parts: [{
-                    text: `Ты — эксперт по школьным тестам (Химия, Укр.мова, История и др.). 
-                    Реши вопрос и выбери ПРАВИЛЬНЫЕ варианты ответа.
+                    text: `Ты — эксперт по школьным тестам. Реши вопрос и выбери ПРАВИЛЬНЫЕ варианты ответа.
                     Вопрос: "${question}"
                     Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}
-                    Ответь ТОЛЬКО номерами правильных вариантов через запятую (например: 0 или 0,2). Без лишних слов.`
+                    Ответь ТОЛЬКО номерами правильных вариантов через запятую (например: 0 или 0,2).`
                 }]
             }]
         };
 
+        // Используем встроенный fetch, он не требует установки модулей
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -35,19 +31,20 @@ exports.handler = async (event) => {
 
         const data = await response.json();
         
-        // Извлекаем текст ответа от ИИ
-        const aiText = data.candidates[0].content.parts[0].text;
-        
-        // Превращаем строку "0, 1" в массив чисел [0, 1]
-        const correct_indices = aiText.match(/\d+/g).map(Number);
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            const aiText = data.candidates[0].content.parts[0].text;
+            const correct_indices = aiText.match(/\d+/g).map(Number);
 
-        return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify({ correct_indices: correct_indices.length > 0 ? correct_indices : [0] })
-        };
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ correct_indices: correct_indices })
+            };
+        }
+        
+        throw new Error("No data from Gemini");
+
     } catch (e) {
-        // Если что-то пошло не так, вернем первый вариант как запасной
         return {
             statusCode: 200,
             headers,
