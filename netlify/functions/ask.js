@@ -16,13 +16,12 @@ exports.handler = async (event) => {
         const postData = JSON.stringify({
             contents: [{
                 parts: [{
-                    text: `Реши тест. Даны варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}. Вопрос: "${question}". Напиши только номера правильных ответов через запятую.`
+                    text: `Реши тест. Вопрос: "${question}". Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}. Напиши ТОЛЬКО цифры правильных ответов через запятую.`
                 }]
             }]
         });
 
         const aiResponse = await new Promise((resolve, reject) => {
-            // Используем v1beta и gemini-1.5-flash — это 100% бесплатная рабочая связка
             const req = https.request(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
@@ -36,15 +35,13 @@ exports.handler = async (event) => {
             req.end();
         });
 
-        console.log("Gemini Response:", JSON.stringify(aiResponse));
-
         if (aiResponse.candidates && aiResponse.candidates[0].content.parts[0].text) {
             const aiText = aiResponse.candidates[0].content.parts[0].text;
             const correct_indices = aiText.match(/\d+/g).map(Number);
             return { statusCode: 200, headers, body: JSON.stringify({ correct_indices }) };
         }
 
-        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0], error: "No text" }) };
+        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0] }) };
 
     } catch (e) {
         return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0], error: e.message }) };
