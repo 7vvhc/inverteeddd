@@ -1,1 +1,9 @@
 
+[build]
+  command = "pip install -r requirements.txt"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
