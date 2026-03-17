@@ -14,11 +14,16 @@ exports.handler = async (event) => {
         const API_KEY = 'AIzaSyBGQF2bK6NWYX7wqkwxBaGFzEfu0RAx5j0';
 
         const postData = JSON.stringify({
-            contents: [{ parts: [{ text: `Реши тест. Вопрос: "${question}". Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}. Напиши ТОЛЬКО цифры правильных ответов через запятую.` }] }]
+            contents: [{
+                parts: [{
+                    text: `Реши тест. Вопрос: "${question}". Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}. Напиши ТОЛЬКО цифры правильных ответов через запятую.`
+                }]
+            }]
         });
 
-        const result = await new Promise((resolve) => {
-            const req = https.request(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+        const result = await new Promise((resolve, reject) => {
+            // Используем v1 и полное название модели gemini-1.5-flash
+            const req = https.request(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             }, (res) => {
@@ -26,12 +31,12 @@ exports.handler = async (event) => {
                 res.on('data', (chunk) => str += chunk);
                 res.on('end', () => resolve(JSON.parse(str)));
             });
+            req.on('error', (e) => reject(e));
             req.write(postData);
             req.end();
         });
 
-        // ЛОГИРУЕМ ОТВЕТ В NETLIFY (проверь это в Logs -> Functions!)
-        console.log("FULL AI RESPONSE:", JSON.stringify(result));
+        console.log("Gemini Output:", JSON.stringify(result));
 
         if (result.candidates && result.candidates[0].content.parts[0].text) {
             const text = result.candidates[0].content.parts[0].text;
@@ -39,7 +44,7 @@ exports.handler = async (event) => {
             return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: indices }) };
         }
 
-        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [] }) };
+        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [], debug: result }) };
     } catch (e) {
         return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [], error: e.message }) };
     }
