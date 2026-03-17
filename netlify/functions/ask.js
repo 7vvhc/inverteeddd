@@ -11,31 +11,35 @@ exports.handler = async (event) => {
 
     try {
         const { question, options } = JSON.parse(event.body);
+        
+        // Твой рабочий ключ Gemini
+        const API_KEY = 'AIzaSyBGQF2bK6NWYX7wqkwxBaGFzEfu0RAx5j0';
 
-        // Формируем запрос для ИИ
-        const prompt = `Ты — помощник по тестам. Реши вопрос и выбери ПРАВИЛЬНЫЕ варианты ответа.
-        Вопрос: "${question}"
-        Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}
-        Ответь ТОЛЬКО номерами правильных вариантов через запятую (например: 0 или 0,2). Без лишних слов.`;
+        const prompt = {
+            contents: [{
+                parts: [{
+                    text: `Ты — эксперт по школьным тестам (Химия, Укр.мова, История и др.). 
+                    Реши вопрос и выбери ПРАВИЛЬНЫЕ варианты ответа.
+                    Вопрос: "${question}"
+                    Варианты: ${options.map((opt, i) => i + ": " + opt).join(", ")}
+                    Ответь ТОЛЬКО номерами правильных вариантов через запятую (например: 0 или 0,2). Без лишних слов.`
+                }]
+            }]
+        };
 
-        // Запрос к бесплатному API (используем прокси для Gemini/GPT)
-        const response = await fetch('https://api.together.xyz/v1/chat/completions', {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
-            headers: {
-                'Authorization': 'Bearer YOUR_API_KEY', // Если нет ключа, можно использовать открытые прокси
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: "mistralai/Mixtral-8x7B-Instruct-v0.1",
-                messages: [{role: "user", content: prompt}]
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(prompt)
         });
 
         const data = await response.json();
-        const aiResult = data.choices[0].message.content;
         
-        // Превращаем текст "0, 1" в массив [0, 1]
-        const correct_indices = aiResult.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        // Извлекаем текст ответа от ИИ
+        const aiText = data.candidates[0].content.parts[0].text;
+        
+        // Превращаем строку "0, 1" в массив чисел [0, 1]
+        const correct_indices = aiText.match(/\d+/g).map(Number);
 
         return {
             statusCode: 200,
@@ -43,7 +47,11 @@ exports.handler = async (event) => {
             body: JSON.stringify({ correct_indices: correct_indices.length > 0 ? correct_indices : [0] })
         };
     } catch (e) {
-        // Если ИИ упал, возвращаем 0, чтобы хоть что-то подсветить
-        return { statusCode: 200, headers, body: JSON.stringify({ correct_indices: [0] }) };
+        // Если что-то пошло не так, вернем первый вариант как запасной
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({ correct_indices: [0], error: e.message })
+        };
     }
 };
