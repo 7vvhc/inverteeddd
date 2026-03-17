@@ -10,21 +10,22 @@ exports.handler = async (event) => {
     try {
         const { question, options } = JSON.parse(event.body);
         
-        // Логика: если в вопросе "обери варіанти" или "квадратики" на фронте
-        // Пока просто имитируем выбор правильных ответов
-        // Например, для "Аргентум нітрат" правильный ответ — Хлорид-аніон (индекс 0)
-        let correct_indexes = [0]; 
+        // ВАЖНО: Сейчас это всё ещё "заглушка". 
+        // Чтобы он РЕАЛЬНО решал, тут должен быть запрос к нейронке или поиск.
+        // Пока сделаем так: если вопрос про массовую долю Хрома — даем индекс 0.
+        let results = [0]; 
 
-        // Если это мультивыбор, можно добавить еще индексы: [0, 2]
-        
+        // Логика для мульти-выбора (квадратиков)
+        if (question.toLowerCase().includes("оберіть") || question.toLowerCase().includes("варіанти")) {
+            results = [0, 1]; // Пример: подсветит две первые кнопки
+        }
+
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ 
-                correct_indexes: correct_indexes 
-            })
+            body: JSON.stringify({ correct_indices: results }) 
         };
-    } catch (error) {
-        return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
+    } catch (e) {
+        return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) };
     }
 };
